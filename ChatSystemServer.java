@@ -148,6 +148,7 @@ public class ChatSystemServer extends JFrame {
             appendToChatArea("Server: " + message);
             sendMessageToClients(message);
             messageField.setText("");
+            updateHistoryTable();
         });
 
         // Create and position the history button
@@ -158,11 +159,28 @@ public class ChatSystemServer extends JFrame {
             }
         });
 
+        // Create buttons for clearing chat and deleting history
+        JButton clearChatButton = new JButton("Clear Chat");
+        clearChatButton.addActionListener(e -> {
+            chatArea.setText(""); // Clear the chat area
+        });
+
+        JButton deleteHistoryButton = new JButton("Delete History");
+        deleteHistoryButton.addActionListener(e -> {
+            deleteAllMessages();
+        });
+
+        // Create a panel to hold clear chat and delete history buttons
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 2));
+        buttonPanel.add(deleteHistoryButton);
+        buttonPanel.add(clearChatButton);
+
         JPanel inputPanel = new JPanel();
         inputPanel.setLayout(new BorderLayout());
         inputPanel.add(messageField, BorderLayout.CENTER);
         inputPanel.add(sendButton, BorderLayout.EAST);
         inputPanel.add(historyButton, BorderLayout.WEST);
+        inputPanel.add(buttonPanel, BorderLayout.SOUTH); // Add the button panel containing clear chat and delete history buttons
 
         // Create the message history table and its model
         historyTableModel = new DefaultTableModel();
@@ -183,11 +201,6 @@ public class ChatSystemServer extends JFrame {
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(splitPane, BorderLayout.CENTER);
         getContentPane().add(inputPanel, BorderLayout.SOUTH);
-        /*getContentPane().add(ipAddressLabel, BorderLayout.NORTH);
-
-        getContentPane().setLayout(new BorderLayout());
-        getContentPane().add(new JScrollPane(chatArea), BorderLayout.CENTER);
-        getContentPane().add(inputPanel, BorderLayout.SOUTH);*/
 
         ipAddressLabel = new JLabel("IP Address: " + getLocalHostAddress());
         getContentPane().add(ipAddressLabel, BorderLayout.NORTH);
@@ -199,6 +212,7 @@ public class ChatSystemServer extends JFrame {
         connectedClients = new ArrayList<>();
         executorService = Executors.newCachedThreadPool();
     }
+
 
     private void startServers() {
         startHttpServer();
@@ -495,6 +509,50 @@ public class ChatSystemServer extends JFrame {
             e.printStackTrace();
         }
         splitPane.setBottomComponent(splitPane.getBottomComponent() == null ? new JScrollPane(historyTable) : null);
+    }
+
+    private void updateHistoryTable() {
+        try {
+            // Clear the existing data in the history table model
+            historyTableModel.setRowCount(0);
+            
+            // Fetch message history from the database
+            PreparedStatement statement = connection.prepareStatement("SELECT sender, message, timestamp FROM messages ORDER BY timestamp");
+            ResultSet resultSet = statement.executeQuery();
+
+            // Populate the table model with data from the result set
+            while (resultSet.next()) {
+                String sender = resultSet.getString("sender");
+                String message = resultSet.getString("message");
+                String timestamp = resultSet.getString("timestamp");
+                historyTableModel.addRow(new Object[]{timestamp, sender, message});
+            }
+            resultSet.close();
+            statement.close();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            // Handle SQLException if needed
+        }
+    }
+
+    private void deleteAllMessages() {
+        try {
+            // Prepare the SQL statement to delete all messages
+            PreparedStatement statement = connection.prepareStatement("DELETE FROM messages");
+            // Execute the SQL statement
+            int rowsAffected = statement.executeUpdate();
+            statement.close(); // Close the PreparedStatement
+            
+            // Notify the user about the deletion
+            JOptionPane.showMessageDialog(this, rowsAffected + " messages deleted from history.", "Delete History", JOptionPane.INFORMATION_MESSAGE);
+            
+            // Clear the message history table
+            historyTableModel.setRowCount(0);
+            updateHistoryTable();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error deleting messages from history.", "Delete History", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     public static void main(String[] args) {
