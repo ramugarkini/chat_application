@@ -714,6 +714,7 @@ public class ChatSystemServer extends JFrame {
                 if (rowsAffected > 0) {
                     JOptionPane.showMessageDialog(this, "HTTP server port changed successfully.", "Change Port", JOptionPane.INFORMATION_MESSAGE);
                     stopHttpServer();
+                    startHttpServer();
                 } else {
                     JOptionPane.showMessageDialog(this, "Failed to change HTTP server port.", "Change Port", JOptionPane.ERROR_MESSAGE);
                 }
