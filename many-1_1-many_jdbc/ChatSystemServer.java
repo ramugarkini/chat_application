@@ -67,18 +67,6 @@ public class ChatSystemServer extends JFrame {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JLabel usernameLabel = new JLabel("Username:");
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(usernameLabel, gbc);
-
-        usernameField = new JTextField(20);
-        usernameField.setText("admin");
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        panel.add(usernameField, gbc);
-
         JLabel passwordLabel = new JLabel("Password:");
         gbc.gridx = 0;
         gbc.gridy = 1;
@@ -100,15 +88,14 @@ public class ChatSystemServer extends JFrame {
 
         loginButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                String username = usernameField.getText();
                 String password = new String(passwordField.getPassword());
 
-                if (validateLogin(username, password)) {
+                if (validateLogin(password)) {
                     // Proceed with opening the chat system
                     loginFrame.dispose(); // Close the login window
                     initializeChatUI(); // Initialize the chat UI
                 } else {
-                    JOptionPane.showMessageDialog(loginFrame, "Incorrect username or password!", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(loginFrame, "Incorrect password!", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -117,10 +104,10 @@ public class ChatSystemServer extends JFrame {
         loginFrame.setVisible(true);
     }
 
-    private boolean validateLogin(String username, String password) {
+    private boolean validateLogin(String password) {
         try {
-            PreparedStatement statement = connection.prepareStatement("SELECT * FROM users WHERE username = ? AND password = ?");
-            statement.setString(1, username);
+            PreparedStatement statement = connection.prepareStatement("SELECT value FROM settings WHERE name = ? AND value = ?");
+            statement.setString(1, "password");
             statement.setString(2, password);
             ResultSet resultSet = statement.executeQuery();
             boolean isValid = resultSet.next();
@@ -170,9 +157,59 @@ public class ChatSystemServer extends JFrame {
             deleteAllMessages();
         });
 
+        JButton changePasswordButton = new JButton("Change Password");
+        changePasswordButton.addActionListener(e -> {
+            // Create a dialog window
+            JDialog dialog = new JDialog();
+            dialog.setTitle("Change Password");
+            dialog.setSize(300, 150);
+            dialog.setResizable(false);
+            dialog.setLocationRelativeTo(null);
+
+            // Create components for the dialog
+            JLabel currentPasswordLabel = new JLabel(" Current Password:");
+            JTextField currentPasswordField = new JTextField(20);
+            JLabel newPasswordLabel = new JLabel(" New Password:");
+            JTextField newPasswordField = new JTextField(20);
+            JButton updatePasswordButton = new JButton("Update Password");
+
+            // Add action listener to the save button
+            updatePasswordButton.addActionListener(event -> {
+                // Get the new password from the text field
+                String currentPassword = currentPasswordField.getText();
+                String newPassword = newPasswordField.getText();
+                
+                // Perform the password change
+                if (validateLogin(currentPassword)) {
+                    changePassword(newPassword);
+                } else {
+                    JOptionPane.showMessageDialog(loginFrame, "Incorrect Current Password!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+                
+                // Close the dialog
+                dialog.dispose();
+            });
+
+            // Set up layout for the dialog
+            JPanel panel = new JPanel(new GridLayout(3, 2, 5, 5));
+            panel.add(currentPasswordLabel);
+            panel.add(currentPasswordField);
+            panel.add(newPasswordLabel);
+            panel.add(newPasswordField);
+            panel.add(new JPanel()); // Placeholder for alignment
+            panel.add(updatePasswordButton);
+
+            // Add the panel to the dialog
+            dialog.add(panel);
+
+            // Make the dialog visible
+            dialog.setVisible(true);
+        });
+
         // Create a panel to hold clear chat and delete history buttons
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 2));
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 3, 0));
         buttonPanel.add(deleteHistoryButton);
+        buttonPanel.add(changePasswordButton);
         buttonPanel.add(clearChatButton);
 
         JPanel inputPanel = new JPanel();
@@ -552,6 +589,26 @@ public class ChatSystemServer extends JFrame {
         } catch (SQLException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error deleting messages from history.", "Delete History", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Method to change the password of a user
+    private void changePassword(String newPassword) {
+        try {
+            // Update the password for the given username
+            PreparedStatement statement = connection.prepareStatement("UPDATE settings SET value = ? WHERE name = ?");
+            statement.setString(1, newPassword);
+            statement.setString(2, "password");
+            int rowsAffected = statement.executeUpdate();
+            statement.close();
+            if (rowsAffected > 0) {
+                JOptionPane.showMessageDialog(this, "Password changed successfully.", "Change Password", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to change password.", "Change Password", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error changing password.", "Change Password", JOptionPane.ERROR_MESSAGE);
         }
     }
 
