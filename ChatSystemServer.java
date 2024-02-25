@@ -206,10 +206,59 @@ public class ChatSystemServer extends JFrame {
             dialog.setVisible(true);
         });
 
+        JButton changeHttpPortButton = new JButton("Change HTTP Port");
+        changeHttpPortButton.addActionListener(e -> {
+            // Create a dialog window
+            JDialog dialog = new JDialog();
+            dialog.setTitle("Change HTTP Server Port");
+            dialog.setSize(300, 100);
+            dialog.setResizable(false);
+            dialog.setLocationRelativeTo(null);
+
+            // Create components for the dialog
+            JLabel httpPortLabel = new JLabel("Enter new HTTP port:");
+            JTextField httpPortField = new JTextField(10);
+            JButton updateHttpPortButton = new JButton("Update");
+
+            int currentHttpPort = getHttpPortFromSettings();
+            httpPortField.setText(String.valueOf(currentHttpPort));
+
+            // Add action listener to the change button
+            updateHttpPortButton.addActionListener(event -> {
+                // Get the new port from the text field
+                String newPort = httpPortField.getText();
+
+                if (isValidPort(Integer.parseInt(newPort))) {
+                    // Update the HTTP server port
+                    updateHttpServerPort(Integer.parseInt(newPort));
+                } else {
+                    // Notify the user about the invalid port
+                    JOptionPane.showMessageDialog(null, "Invalid port number!", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+                
+                // Close the dialog
+                dialog.dispose();
+            });
+
+            // Set up layout for the dialog
+            JPanel panel = new JPanel(new GridLayout(2, 2, 5, 5));
+            panel.add(httpPortLabel);
+            panel.add(httpPortField);
+            panel.add(new JPanel()); // Placeholder for alignment
+            panel.add(updateHttpPortButton);
+
+            // Add the panel to the dialog
+            dialog.add(panel);
+
+            // Make the dialog visible
+            dialog.setVisible(true);
+        });
+
         // Create a panel to hold clear chat and delete history buttons
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 3));
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 4));
         buttonPanel.add(deleteHistoryButton);
         buttonPanel.add(changePasswordButton);
+        buttonPanel.add(changeHttpPortButton);
         buttonPanel.add(clearChatButton);
 
         JPanel inputPanel = new JPanel();
@@ -394,7 +443,9 @@ public class ChatSystemServer extends JFrame {
 
     private void startHttpServer() {
         try {
-            httpServer = HttpServer.create(new InetSocketAddress("0.0.0.0", 8000), 0);
+            int httpPort = getHttpPortFromSettings();
+            httpServer = HttpServer.create(new InetSocketAddress("0.0.0.0", httpPort), 0);
+            // httpServer = HttpServer.create(new InetSocketAddress("0.0.0.0", 8000), 0);
             httpServer.createContext("/", new HttpHandler() {
                 @Override
                 public void handle(HttpExchange exchange) throws IOException {
@@ -409,9 +460,15 @@ public class ChatSystemServer extends JFrame {
             });
             httpServer.setExecutor(null); // Use the default executor
             httpServer.start();
-            appendToChatArea("HTTP Server started on port 8000");
+            appendToChatArea("HTTP Server started on port " + httpPort);
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void stopHttpServer() {
+        if (httpServer != null) {
+            httpServer.stop(0); // Stop the server immediately
         }
     }
 
@@ -420,14 +477,15 @@ public class ChatSystemServer extends JFrame {
             @Override
             public void onOpen(WebSocket conn, ClientHandshake handshake) {
                 // Handle WebSocket connection opening
-                appendToChatArea("WebSocket connection opened: " + conn.getRemoteSocketAddress());
+                // appendToChatArea("WebSocket connection opened: " + conn.getRemoteSocketAddress());
+                appendToChatArea("WebSocket connection opened: " + conn.getRemoteSocketAddress() + " on port 8001");
                 connectedClients.add(conn); // Add the newly connected client to the list
             }
 
             @Override
             public void onClose(WebSocket conn, int code, String reason, boolean remote) {
                 // Handle WebSocket connection closing
-                appendToChatArea("WebSocket connection closed: " + conn.getRemoteSocketAddress());
+                appendToChatArea("WebSocket connection closed");
                 connectedClients.remove(conn); // Remove the closed client from the list
             }
 
@@ -443,12 +501,6 @@ public class ChatSystemServer extends JFrame {
             public void onError(WebSocket conn, Exception ex) {
                 // Handle WebSocket errors
                 ex.printStackTrace();
-            }
-
-            // @Override
-            public void onStart() {
-                // Handle WebSocket server startup
-                appendToChatArea("WebSocket server started on port 8001");
             }
         };
         webSocketServer.start();
@@ -609,6 +661,69 @@ public class ChatSystemServer extends JFrame {
         } catch (SQLException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error changing password.", "Change Password", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private boolean isValidPort(int port) {
+        return port >= 0 && port <= 65535;
+    }
+
+    private int getHttpPortFromSettings() {
+        try {
+            // Prepare the SQL statement to select the HTTP port from the settings table
+            PreparedStatement statement = connection.prepareStatement("SELECT value FROM settings WHERE name = ?");
+            statement.setString(1, "http port");
+
+            // Execute the SQL statement
+            ResultSet resultSet = statement.executeQuery();
+
+            // Check if a record was found
+            if (resultSet.next()) {
+                // Get the HTTP port value from the result set
+                int httpPort = resultSet.getInt("value");
+
+                // Close the result set and statement
+                resultSet.close();
+                statement.close();
+
+                return httpPort;
+            } else {
+                // If no record was found, return a default port (e.g., 8000)
+                return 8000;
+            }
+        } catch (SQLException ex) {
+            // Handle SQL exception
+            ex.printStackTrace();
+            // Return a default port in case of an error
+            return 8000;
+        }
+    }
+
+    private void updateHttpServerPort(Integer newPort) {
+        try {
+            // Check if the new port is valid
+            if (isValidPort(newPort)) {
+                // Update the HTTP server port in the database
+                PreparedStatement statement = connection.prepareStatement("UPDATE settings SET value = ? WHERE name = ?");
+                statement.setInt(1, newPort);
+                statement.setString(2, "http port");
+                int rowsAffected = statement.executeUpdate();
+                statement.close();
+
+                // Check if the update was successful
+                if (rowsAffected > 0) {
+                    JOptionPane.showMessageDialog(this, "HTTP server port changed successfully.", "Change Port", JOptionPane.INFORMATION_MESSAGE);
+                    stopHttpServer();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to change HTTP server port.", "Change Port", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                // If the port is not valid, display an error message
+                JOptionPane.showMessageDialog(this, "Invalid port number. Please enter a valid port number.", "Change Port", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error changing HTTP server port.", "Change Port", JOptionPane.ERROR_MESSAGE);
         }
     }
 
