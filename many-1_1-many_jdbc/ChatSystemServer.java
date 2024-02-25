@@ -207,7 +207,7 @@ public class ChatSystemServer extends JFrame {
         });
 
         // Create a panel to hold clear chat and delete history buttons
-        JPanel buttonPanel = new JPanel(new GridLayout(1, 3, 3, 0));
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 3));
         buttonPanel.add(deleteHistoryButton);
         buttonPanel.add(changePasswordButton);
         buttonPanel.add(clearChatButton);
