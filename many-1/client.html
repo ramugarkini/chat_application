@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Client</title>
+</head>
+<body>
+    <div id="sentMessages"></div> <!-- Add a div to display sent messages -->
+
+    <input type="text" id="messageInput" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        function sendMessage() {
+            var messageInput = document.getElementById("messageInput");
+            var message = messageInput.value.trim();
+            if (message !== "") {
+                fetch("/send", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: "message=" + encodeURIComponent(message)
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to send message");
+                    }
+                    messageInput.value = "";
+                    // Append the sent message to the sentMessages div
+                    document.getElementById("sentMessages").innerHTML += "<p>Sent: " + message + "</p>";
+                }).catch(error => {
+                    console.error("Error:", error);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

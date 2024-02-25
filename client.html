@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Client</title>
+    <style>
+        /* Style for sent messages */
+        .sent-message {
+            color: blue; /* Change the color to differentiate sent messages */
+        }
+    </style>
+</head>
+<body>
+    <div id="receivedMessages"></div> <!-- Add a div to display received messages -->
+
+    <input type="text" id="messageInput" placeholder="Type your message...">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        var webSocket = new WebSocket("ws://192.168.1.12:8001/ws"); // Connect to the WebSocket server
+
+        // Event listener for WebSocket connection opening
+        webSocket.onopen = function(event) {
+            console.log("WebSocket connection opened");
+        };
+
+        // Event listener for WebSocket messages
+        webSocket.onmessage = function(event) {
+            var message = event.data;
+            // Append the received message to the receivedMessages div
+            appendMessage("<p>Received: " + message + "</p>");
+        };
+
+        // Event listener for WebSocket connection closing
+        webSocket.onclose = function(event) {
+            console.log("WebSocket connection closed");
+        };
+
+        // Event listener for WebSocket errors
+        webSocket.onerror = function(event) {
+            console.error("WebSocket error:", event);
+        };
+
+        function sendMessage() {
+            var messageInput = document.getElementById("messageInput");
+            var message = messageInput.value.trim();
+            if (message !== "") {
+                // Send the message via WebSocket
+                webSocket.send(message);
+                messageInput.value = "";
+                // Append the sent message to the receivedMessages div with a class for styling
+                appendMessage("<p class='sent-message'>Sent: " + message + "</p>");
+            }
+        }
+
+        // Function to append a message to the receivedMessages div
+        function appendMessage(message) {
+            var receivedMessagesDiv = document.getElementById("receivedMessages");
+            receivedMessagesDiv.innerHTML += message;
+            // Automatically scroll to the bottom of the div to show the latest message
+            receivedMessagesDiv.scrollTop = receivedMessagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>
