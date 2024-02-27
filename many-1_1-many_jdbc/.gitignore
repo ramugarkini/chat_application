@@ -1,0 +1,6 @@
+*.class
+1-1/*.class
+1-1_no_gui/*.class
+many-1/*.class
+many-1_1-many/*.class
+many-1_1-many_jdbc/*.class

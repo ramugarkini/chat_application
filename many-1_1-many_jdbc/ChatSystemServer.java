@@ -74,7 +74,7 @@ public class ChatSystemServer extends JFrame {
         panel.add(passwordLabel, gbc);
 
         passwordField = new JPasswordField(20);
-        passwordField.setText("admin");
+        passwordField.setText("");
         gbc.gridx = 1;
         gbc.gridy = 1;
         gbc.gridwidth = 2;
@@ -216,7 +216,7 @@ public class ChatSystemServer extends JFrame {
             dialog.setLocationRelativeTo(null);
 
             // Create components for the dialog
-            JLabel httpPortLabel = new JLabel("Enter new HTTP port:");
+            JLabel httpPortLabel = new JLabel(" Enter new HTTP port:");
             JTextField httpPortField = new JTextField(10);
             JButton updateHttpPortButton = new JButton("Update");
 
@@ -492,7 +492,7 @@ public class ChatSystemServer extends JFrame {
             @Override
             public void onMessage(WebSocket conn, String message) {
                 // Handle incoming messages from WebSocket clients
-                appendToChatArea("Client: " + message);
+                appendToChatArea("Client: " + " " + conn.getRemoteSocketAddress().toString() + ": " + message);
                 // sendMessageToClients("Server: " + message); // No need to echo messages back to clients
                 saveMessageToDatabase(conn.getRemoteSocketAddress().toString(), message);
             }
