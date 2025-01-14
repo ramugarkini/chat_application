@@ -1,4 +1,3 @@
-# chat_application
 features:
 
 User Authentication:
